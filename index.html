@@ -1,162 +1,93 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>바퀴 만들기 게임</title>
+<meta charset="UTF-8"><title>바퀴 만들기 게임 - 유전자 신체 변이</title>
 <style>
-  *{box-sizing:border-box;user-select:none;font-family:'Malgun Gothic',sans-serif}
-  body{margin:0;background:#120f0d;color:#f5ebe0;display:flex;flex-direction:column;height:100vh;overflow:hidden}
-  header{background:#1d1612;padding:10px 16px;border-bottom:1px solid #4a3525;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
-  .stats span{background:#2b211a;padding:5px 10px;border-radius:8px;border:1px solid #5c4028;margin-right:6px;font-size:13px;font-weight:bold}
-  main{flex:1;display:flex;overflow:hidden}
-  #arena{flex:1;position:relative;background:#16110d}
-  canvas{width:100%;height:100%;display:block;cursor:crosshair}
-  aside{width:310px;background:#1b1511;border-left:1px solid #4a3525;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
-  .card{background:#261d17;border:1px solid #5c4028;border-radius:10px;padding:10px;display:flex;justify-content:space-between;align-items:center}
-  .card h4{margin:0 0 4px 0;font-size:14px;color:#fbbf24}
-  .card p{margin:0;font-size:11px;color:#d6c7b8}
-  button{background:#b45309;color:#fff;border:none;padding:7px 12px;border-radius:8px;font-weight:bold;cursor:pointer}
-  button:hover{background:#d97706}
-  #log{margin-top:auto;background:#120d0a;padding:8px;border-radius:8px;height:110px;overflow-y:auto;font-size:11px;color:#fde68a;border:1px solid #3d2c1e}
+*{box-sizing:border-box;user-select:none;font-family:'Malgun Gothic',sans-serif}
+body{margin:0;background:#120f0d;color:#f5ebe0;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+header{background:#1b1511;padding:8px 14px;border-bottom:1px solid #4a3525;display:flex;justify-content:space-between;align-items:center}
+.stats span{background:#261d17;padding:4px 8px;border-radius:6px;border:1px solid #5c4028;margin-right:4px;font-size:12px;font-weight:bold}
+main{flex:1;display:flex;overflow:hidden}#arena{flex:1;position:relative}canvas{width:100%;height:100%;display:block}
+aside{width:340px;background:#18120e;border-left:1px solid #4a3525;padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+#mBox{background:#0c0907;border:1px solid #10b981;border-radius:8px;padding:6px;text-align:center}
+.card{background:#241b15;border:1px solid #5c4028;border-radius:8px;padding:7px;display:flex;justify-content:space-between;align-items:center}
+.card h4{margin:0;font-size:12px;color:#fbbf24}.card p{margin:2px 0 0;font-size:10px;color:#d6c7b8}
+button{background:#059669;color:#fff;border:none;padding:5px 9px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:11px}
 </style>
 </head>
 <body>
 <header>
-  <div><strong style="font-size:18px;color:#fbbf24">🪳 바퀴 만들기 게임</strong> <span id="stageTxt" style="font-size:12px;color:#a7f3d0">1단계: 유충 바퀴</span></div>
+  <div><strong style="color:#fbbf24">🪳 바퀴 만들기 게임</strong> <span id="st" style="font-size:12px;color:#6ee7b7">1단계: 유충 바퀴</span></div>
   <div class="stats">
-    <span>🧀 먹이: <b id="food">60</b></span>
-    <span>🧬 유전자: <b id="dna">15</b></span>
-    <span>🥚 콜로니: <b id="pop">1/15</b></span>
-    <span>⚔️ 웨이브: <b id="wave">1</b> (<b id="timer">20</b>s)</span>
-    <span>👑 체력: <b id="hp">150/150</b></span>
-    <span>🪺 은신처: <b id="nestHp">500/500</b></span>
+    <span>🧀먹이:<b id="fd">80</b></span><span>🧬유전자:<b id="dn">25</b></span>
+    <span>🥚군집:<b id="pp">1/15</b></span><span>⚔️웨이브:<b id="wv">1</b></span>
   </div>
 </header>
 <main>
   <div id="arena"><canvas id="cv"></canvas></div>
   <aside>
-    <div class="card"><div><h4>🪳 일꾼 바퀴 부화</h4><p>먹이 자동 채집 (비용: 먹이 15)</p></div><button onclick="spawnAlly('worker')">부화</button></div>
-    <div class="card"><div><h4>⚔️ 병정 바퀴 부화</h4><p>개미·그리마 공격 (비용: 먹이 30)</p></div><button onclick="spawnAlly('soldier')">부화</button></div>
-    <div class="card"><div><h4>🛡️ 장갑 바퀴 부화</h4><p>고체력 방어 탱커 (먹이 50·유전자 2)</p></div><button onclick="spawnAlly('tank')">부화</button></div>
-    <div class="card"><div><h4>🧪 산성 바퀴 부화</h4><p>원거리 산성 포격 (먹이 60·유전자 3)</p></div><button onclick="spawnAlly('spitter')">부화</button></div>
-    <div class="card"><div><h4>🧬 바퀴 진화 강화</h4><p>대장 및 군집 공격·체력 상승 (유전자 5)</p></div><button onclick="evolveRoach()">진화</button></div>
-    <div class="card"><div><h4>📢 페로몬 총집결 [스킬]</h4><p>아군 집결 및 산성 폭발 분사</p></div><button onclick="castSkill()">발동</button></div>
-    <div class="card"><div><h4>🪺 은신처 확장·수리</h4><p>수용량 +5 및 내구도 회복 (먹이 40)</p></div><button onclick="upgradeNest()">확장</button></div>
-    <div id="log"><div>[안내] 마우스 클릭 또는 WASD로 대장 바퀴를 조작하세요! 그리마와 개미 군단을 물리치세요.</div></div>
+    <div id="mBox">
+      <div style="font-size:11px;color:#34d399;font-weight:bold">🔬 실시간 유전자 신체 변이 현미경</div>
+      <canvas id="mCv" width="300" height="115" style="height:115px"></canvas>
+      <div id="tr" style="font-size:10px;color:#a7f3d0">갑각·대턱·날개·독낭 유전자 진화 시 외형 실시간 변이!</div>
+    </div>
+    <div class="card"><div><h4>🛡️ 등판 갑각·가시·뿔 (<span id="lC">Lv.1</span>)</h4><p>방패 등판·측면 가시·두부 뿔 발현 (🧬4)</p></div><button onclick="mut('c')">진화</button></div>
+    <div class="card"><div><h4>🦷 포식자 거대 톱니턱 (<span id="lM">Lv.1</span>)</h4><p>사슴벌레형 톱니 대턱 성장 (🧬4)</p></div><button onclick="mut('m')">진화</button></div>
+    <div class="card"><div><h4>🪽 시맥 날개·가시다리 (<span id="lA">Lv.1</span>)</h4><p>반투명 날개 2쌍·깃털 더듬이 (🧬4)</p></div><button onclick="mut('a')">진화</button></div>
+    <div class="card"><div><h4>🧪 복부 산성 독낭·혈관 (<span id="lR">Lv.1</span>)</h4><p>초록 독낭 맥동·형광 혈관 발현 (🧬5)</p></div><button onclick="mut('r')">진화</button></div>
+    <div class="card"><div><h4>🥚 콜로니 바퀴 부화</h4><p>유전 형질(외형)을 물려받는 군집</p></div><div><button onclick="sp('w')">일꾼</button> <button onclick="sp('s')">병정</button> <button onclick="sp('t')">산성</button></div></div>
+    <div class="card"><div><h4>📢 페로몬 집결 & 산성 분사</h4><p>군집 집결 + 방사형 산성탄 발사</p></div><button onclick="sk()">발동</button></div>
   </aside>
 </main>
 <script>
-const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
-let W=800,H=500,keys={};
-function resize(){W=cv.width=cv.parentElement.clientWidth;H=cv.height=cv.parentElement.clientHeight}
-window.addEventListener('resize',resize);resize();
-window.addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
-window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-
-const state={food:60,dna:15,wave:1,timer:20,evo:1,nest:{x:120,y:250,hp:500,maxHp:500,cap:15},
-  leader:{x:200,y:250,tx:null,ty:null,hp:150,maxHp:150,atk:18,spd:150,ang:0},
-  allies:[],enemies:[],foods:[],projs:[]};
-
-cv.addEventListener('mousedown',e=>{const r=cv.getBoundingClientRect();state.leader.tx=e.clientX-r.left;state.leader.ty=e.clientY-r.top});
-function log(m){const el=document.getElementById('log'),d=document.createElement('div');d.textContent=m;el.prepend(d)}
-function spawnFood(){state.foods.push({x:180+Math.random()*(W-220),y:40+Math.random()*(H-80),v:15})}
-for(let i=0;i<7;i++)spawnFood();
-
-function spawnAlly(t){
-  if(1+state.allies.length>=state.nest.cap)return log('[알림] 은신처 수용량이 가득 찼습니다!');
-  const fc=t==='worker'?15:t==='soldier'?30:t==='tank'?50:60,dc=t==='tank'?2:t==='spitter'?3:0;
-  if(state.food<fc||state.dna<dc)return log('[알림] 먹이 또는 유전자가 부족합니다!');
-  state.food-=fc;state.dna-=dc;
-  const m=1+(state.evo-1)*0.25;
-  state.allies.push({t,x:state.nest.x+20,y:state.nest.y,ang:0,carry:0,cd:0,
-    hp:(t==='tank'?220:t==='soldier'?100:65)*m,atk:(t==='spitter'?20:t==='soldier'?15:8)*m,spd:t==='tank'?85:115});
-  log(`[부화] ${t} 바퀴가 콜로니에 합류했습니다!`);
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),mCv=document.getElementById('mCv'),mCtx=mCv.getContext('2d');
+let W=cv.width=800,H=cv.height=500;window.onresize=()=>{W=cv.width=cv.parentElement.clientWidth;H=cv.height=cv.parentElement.clientHeight};window.onresize();
+const S={fd:80,dn:25,wv:1,tm:18,g:{c:1,m:1,a:1,r:1},L:{x:210,y:250,tx:210,ty:250,ang:0,ph:0},al:[],en:[],fo:[],pr:[]};
+cv.onmousedown=e=>{const r=cv.getBoundingClientRect();S.L.tx=e.clientX-r.left;S.L.ty=e.clientY-r.top};
+for(let i=0;i<7;i++)S.fo.push({x:180+Math.random()*500,y:50+Math.random()*400});
+function mut(k){if(S.dn<4)return;S.dn-=4;S.g[k]++;document.getElementById('l'+k.toUpperCase()).textContent='Lv.'+S.g[k];
+  document.getElementById('tr').textContent=`발현: 갑각Lv.${S.g.c} · 대턱Lv.${S.g.m} · 날개Lv.${S.g.a} · 독낭Lv.${S.g.r}`}
+function sp(t){if(S.fd<20)return;S.fd-=20;S.al.push({t,x:130,y:250,ang:0,ph:0,hp:100+S.g.c*25,cd:0})}
+function sk(){for(let i=0;i<12;i++){const a=i*0.52;S.pr.push({x:S.L.x,y:S.L.y,vx:Math.cos(a)*260,vy:Math.sin(a)*260,l:1})}}
+function drawRoach(c,x,y,r,ang,col,ph,g){
+  c.save();c.translate(x,y);c.rotate(ang);const t=performance.now()*0.004;
+  for(let s=-1;s<=1;s+=2)for(let i=-1;i<=1;i++){
+    const sw=Math.sin(ph+i*2+(s>0?0:3.1))*r*0.25,kx=i*r*0.35+sw*0.5,ky=s*r*0.95,fx=kx-r*0.3+sw,fy=s*r*1.5;
+    c.strokeStyle='#3b1d0e';c.lineWidth=1.8+(g.a-1)*0.5;c.beginPath();c.moveTo(i*r*0.3,s*r*0.3);c.lineTo(kx,ky);c.lineTo(fx,fy);c.stroke();
+    if(g.a>1||g.c>1){c.strokeStyle='#f59e0b';c.lineWidth=1;c.beginPath();c.moveTo(kx,ky);c.lineTo(kx-r*0.2,ky+s*r*0.22);c.stroke()}
+  }
+  if(g.r>1){for(let s=-1;s<=1;s+=2)for(let k=0;k<Math.min(3,g.r);k++){
+    c.fillStyle='rgba(34,197,94,0.85)';c.beginPath();c.arc(-r*(0.1+k*0.3),s*r*0.76,r*(0.2+g.r*0.03)*(1+Math.sin(t*3)*0.15),0,7);c.fill()}}
+  c.fillStyle=col;c.strokeStyle=g.c>2?'#fbbf24':'#261309';c.lineWidth=2;
+  c.beginPath();c.ellipse(-r*0.15,0,r*1.15,r*(0.75+(g.c-1)*0.05),0,0,7);c.fill();c.stroke();
+  if(g.c>1){c.fillStyle='#f59e0b';for(let s=-1;s<=1;s+=2)for(let k=0;k<Math.min(4,g.c);k++){
+    const bx=-r*(0.05+k*0.25),by=s*r*0.72;c.beginPath();c.moveTo(bx+4,by);c.lineTo(bx-6,by+s*r*(0.28+g.c*0.04));c.lineTo(bx-4,by);c.fill()}}
+  c.fillStyle=col;c.beginPath();c.ellipse(r*0.52,0,r*(0.5+(g.c-1)*0.04),r*(0.64+(g.c-1)*0.06),0,0,7);c.fill();c.stroke();
+  if(g.a>1){const wL=r*(0.8+g.a*0.2);for(let s=-1;s<=1;s+=2){
+    c.save();c.translate(r*0.2,s*r*0.12);c.rotate(s*(0.12+Math.sin(t*3)*0.08));
+    c.fillStyle='rgba(254,240,138,0.28)';c.strokeStyle='#fbbf24';c.beginPath();c.ellipse(-wL*0.45,0,wL*0.55,r*0.28,0,0,7);c.fill();c.stroke();c.restore()}}
+  if(g.r>1){c.strokeStyle='#4ade80';c.beginPath();c.moveTo(r*0.3,0);c.lineTo(-r*0.9,0);c.stroke()}
+  const jS=0.6+(g.m-1)*0.4;for(let s=-1;s<=1;s+=2){
+    c.save();c.translate(r*0.9,s*r*0.18);c.rotate(s*(0.25-Math.sin(t*3)*0.12));c.fillStyle=g.m>2?'#dc2626':'#451a03';
+    c.beginPath();c.moveTo(0,0);c.quadraticCurveTo(r*0.45*jS,s*r*0.25*jS,r*0.75*jS,-s*r*0.08*jS);c.lineTo(r*0.35*jS,0);c.fill();c.restore()}
+  if(g.c>3){c.fillStyle='#facc15';c.beginPath();c.moveTo(r*0.55,-4);c.lineTo(r*1.2,0);c.lineTo(r*0.55,4);c.fill()}
+  c.strokeStyle='#fbbf24';c.lineWidth=1.5;for(let s=-1;s<=1;s+=2){
+    c.beginPath();c.moveTo(r*0.92,s*3);c.quadraticCurveTo(r*1.4,s*r*0.6,r*(2.2+g.a*0.2),s*r);c.stroke()}
+  c.restore();
 }
-function evolveRoach(){
-  if(state.dna<5)return log('[알림] 유전자가 부족합니다!');
-  state.dna-=5;state.evo++;state.leader.maxHp+=40;state.leader.hp=state.leader.maxHp;state.leader.atk+=8;
-  const names=['유충 바퀴','청년 바퀴','갑각 변이체','제왕 바퀴','궁극의 바퀴신'];
-  document.getElementById('stageTxt').textContent=`${state.evo}단계: ${names[Math.min(4,state.evo-1)]}`;
-  log(`[진화] 바퀴 유전자가 ${state.evo}단계로 진화했습니다!`);
-}
-function castSkill(){
-  for(const a of state.allies){a.x=state.leader.x+(Math.random()-0.5)*40;a.y=state.leader.y+(Math.random()-0.5)*40}
-  for(let i=0;i<12;i++){const a=(Math.PI*2/12)*i;state.projs.push({x:state.leader.x,y:state.leader.y,vx:Math.cos(a)*260,vy:Math.sin(a)*260,dmg:30+state.evo*8,life:1})}
-  log('[스킬] 페로몬 집결 및 산성 폭발 분사!');
-}
-function upgradeNest(){
-  if(state.food<40)return log('[알림] 먹이가 부족합니다!');
-  state.food-=40;state.nest.cap+=5;state.nest.hp=Math.min(state.nest.maxHp,state.nest.hp+150);
-  log('[은신처] 은신처 확장 및 보수 완료!');
-}
-function spawnWave(){
-  const w=state.wave;
-  for(let i=0;i<2+w;i++)state.enemies.push({k:'개미',x:W-20,y:40+Math.random()*(H-80),hp:45+w*15,atk:8+w*2,spd:90,r:8,cd:0});
-  for(let i=0;i<Math.ceil(w/2);i++)state.enemies.push({k:'그리마',x:W-20,y:60+Math.random()*(H-120),hp:130+w*35,atk:18+w*4,spd:125,r:14,cd:0});
-  log(`[경보] 제 ${w} 웨이브: 개미 군단과 천적 그리마가 습격합니다!`);
-}
-
-let last=performance.now();
 function loop(now){
-  const dt=Math.min(0.05,(now-last)/1000);last=now;
-  state.timer-=dt;if(state.timer<=0){spawnWave();state.wave++;state.timer=22}
-  if(state.foods.length<6&&Math.random()<0.03)spawnFood();
-
-  let mx=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0);
-  let my=(keys['s']||keys['arrowdown']?1:0)-(keys['w']||keys['arrowup']?1:0);
-  const L=state.leader;
-  if(mx||my){L.tx=null;const l=Math.hypot(mx,my);L.x+=(mx/l)*L.spd*dt;L.y+=(my/l)*L.spd*dt;L.ang=Math.atan2(my,mx)}
-  else if(L.tx!==null){const dx=L.tx-L.x,dy=L.ty-L.y,d=Math.hypot(dx,dy);if(d>5){L.x+=(dx/d)*L.spd*dt;L.y+=(dy/d)*L.spd*dt;L.ang=Math.atan2(dy,dx)}else L.tx=null}
-
-  for(let i=state.foods.length-1;i>=0;i--){const f=state.foods[i];if(Math.hypot(L.x-f.x,L.y-f.y)<22){state.food+=f.v;state.foods.splice(i,1)}}
-  for(const en of state.enemies){if(Math.hypot(L.x-en.x,L.y-en.y)<28){en.hp-=L.atk*dt*2}}
-
-  for(let i=state.allies.length-1;i>=0;i--){
-    const a=state.allies[i];a.cd=Math.max(0,a.cd-dt);
-    if(a.hp<=0){state.allies.splice(i,1);continue}
-    if(a.t==='worker'){
-      if(a.carry>0){const dx=state.nest.x-a.x,dy=state.nest.y-a.y,d=Math.hypot(dx,dy);a.x+=(dx/d)*a.spd*dt;a.y+=(dy/d)*a.spd*dt;if(d<35){state.food+=a.carry;a.carry=0}}
-      else if(state.foods[0]){const f=state.foods[0],dx=f.x-a.x,dy=f.y-a.y,d=Math.hypot(dx,dy);a.x+=(dx/d)*a.spd*dt;a.y+=(dy/d)*a.spd*dt;if(d<15){a.carry=f.v;state.foods.shift()}}
-    }else if(state.enemies[0]){
-      const en=state.enemies[0],dx=en.x-a.x,dy=en.y-a.y,d=Math.hypot(dx,dy),rng=a.t==='spitter'?140:20;
-      if(d>rng){a.x+=(dx/d)*a.spd*dt;a.y+=(dy/d)*a.spd*dt}
-      else if(a.cd<=0){a.cd=0.7;if(a.t==='spitter')state.projs.push({x:a.x,y:a.y,vx:(dx/d)*240,vy:(dy/d)*240,dmg:a.atk,life:0.8});else en.hp-=a.atk}
-    }
-  }
-  for(let i=state.projs.length-1;i>=0;i--){
-    const p=state.projs[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;
-    for(const en of state.enemies){if(Math.hypot(en.x-p.x,en.y-p.y)<en.r+6){en.hp-=p.dmg;p.life=0;break}}
-    if(p.life<=0)state.projs.splice(i,1);
-  }
-  for(let i=state.enemies.length-1;i>=0;i--){
-    const en=state.enemies[i];
-    if(en.hp<=0){state.food+=15;state.dna+=en.k==='그리마'?4:1;state.enemies.splice(i,1);continue}
-    const tgt=state.allies[0]||state.nest,dx=tgt.x-en.x,dy=tgt.y-en.y,d=Math.hypot(dx,dy);
-    if(d>22){en.x+=(dx/d)*en.spd*dt;en.y+=(dy/d)*en.spd*dt}else{tgt.hp-=en.atk*dt;if(state.nest.hp<=0){state.nest.hp=500;state.wave=1;state.enemies=[];log('[재시작] 은신처가 파괴되어 콜로니를 재건합니다!')}}
-  }
-
-  ctx.fillStyle='#16110d';ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#5c3a21';ctx.beginPath();ctx.arc(state.nest.x,state.nest.y,36,0,7);ctx.fill();
-  ctx.fillStyle='#fde68a';ctx.fillText('🪺 은신처',state.nest.x-22,state.nest.y+50);
-  for(const f of state.foods){ctx.fillStyle='#facc15';ctx.beginPath();ctx.arc(f.x,f.y,6,0,7);ctx.fill()}
-  for(const a of state.allies){ctx.fillStyle=a.t==='spitter'?'#4ade80':a.t==='tank'?'#eab308':'#a16207';ctx.beginPath();ctx.ellipse(a.x,a.y,10,7,0,0,7);ctx.fill()}
-  ctx.fillStyle='#7c2d12';ctx.beginPath();ctx.ellipse(L.x,L.y,15+state.evo,10+state.evo*0.6,L.ang,0,7);ctx.fill();
-  ctx.fillStyle='#fbbf24';ctx.fillText('👑 대장 바퀴',L.x-26,L.y-16);
-  for(const en of state.enemies){
-    ctx.fillStyle=en.k==='그리마'?'#dc2626':'#7f1d1d';
-    ctx.beginPath();ctx.ellipse(en.x,en.y,en.r*1.3,en.r*0.7,0,0,7);ctx.fill();
-    ctx.fillStyle='#fca5a5';ctx.fillText(en.k,en.x-14,en.y-14);
-  }
-  for(const p of state.projs){ctx.fillStyle='#4ade80';ctx.beginPath();ctx.arc(p.x,p.y,4,0,7);ctx.fill()}
-
-  document.getElementById('food').textContent=Math.floor(state.food);
-  document.getElementById('dna').textContent=Math.floor(state.dna);
-  document.getElementById('pop').textContent=`${1+state.allies.length}/${state.nest.cap}`;
-  document.getElementById('wave').textContent=state.wave;
-  document.getElementById('timer').textContent=Math.ceil(state.timer);
-  document.getElementById('hp').textContent=`${Math.ceil(L.hp)}/${L.maxHp}`;
-  document.getElementById('nestHp').textContent=`${Math.ceil(state.nest.hp)}/${state.nest.maxHp}`;
+  S.tm-=0.016;if(S.tm<=0){S.tm=18;S.wv++;for(let i=0;i<3+S.wv;i++)S.en.push({k:i%2?'그리마':'개미',x:W-20,y:60+Math.random()*(H-120),hp:60+S.wv*25,ph:0})}
+  const L=S.L,dx=L.tx-L.x,dy=L.ty-L.y,d=Math.hypot(dx,dy);if(d>5){L.x+=(dx/d)*3;L.y+=(dy/d)*3;L.ang=Math.atan2(dy,dx);L.ph+=0.3}
+  for(let i=S.fo.length-1;i>=0;i--)if(Math.hypot(L.x-S.fo[i].x,L.y-S.fo[i].y)<25){S.fd+=18;S.fo.splice(i,1);S.fo.push({x:180+Math.random()*(W-220),y:50+Math.random()*(H-100)})}
+  for(let i=S.en.length-1;i>=0;i--){const e=S.en[i];e.x-=1.4;e.ph+=0.3;if(Math.hypot(L.x-e.x,L.y-e.y)<32)e.hp-=1.5+S.g.m;if(e.hp<=0){S.fd+=15;S.dn+=3;S.en.splice(i,1)}}
+  ctx.fillStyle='#18130e';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#3b2313';ctx.beginPath();ctx.arc(110,250,38,0,7);ctx.fill();
+  for(const f of S.fo){ctx.fillStyle='#facc15';ctx.beginPath();ctx.arc(f.x,f.y,6,0,7);ctx.fill()}
+  for(const a of S.al){a.ph+=0.25;drawRoach(ctx,a.x+=Math.cos(a.ph*0.1),a.y+=Math.sin(a.ph*0.1),11,a.ang,'#9a3412',a.ph,S.g)}
+  drawRoach(ctx,L.x,L.y,17+S.g.c,L.ang,'#7a3e1d',L.ph,S.g);
+  for(const e of S.en){drawRoach(ctx,e.x,e.y,e.k==='그리마'?15:9,3.14,e.k==='그리마'?'#b91c1c':'#451a03',e.ph,{c:e.k==='그리마'?3:1,m:2,a:1,r:1})}
+  mCtx.fillStyle='#0c0907';mCtx.fillRect(0,0,300,115);drawRoach(mCtx,145,58,23,Math.sin(now*0.002)*0.12,'#7a3e1d',now*0.006,S.g);
+  document.getElementById('fd').textContent=S.fd;document.getElementById('dn').textContent=S.dn;document.getElementById('wv').textContent=S.wv;
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
