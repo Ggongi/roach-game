@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>바퀴 만들기 게임</title>
+<style>
+  *{box-sizing:border-box;user-select:none;font-family:'Malgun Gothic',sans-serif}
+  body{margin:0;background:#120f0d;color:#f5ebe0;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  header{background:#1d1612;padding:10px 16px;border-bottom:1px solid #4a3525;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  .stats span{background:#2b211a;padding:5px 10px;border-radius:8px;border:1px solid #5c4028;margin-right:6px;font-size:13px;font-weight:bold}
+  main{flex:1;display:flex;overflow:hidden}
+  #arena{flex:1;position:relative;background:#16110d}
+  canvas{width:100%;height:100%;display:block;cursor:crosshair}
+  aside{width:310px;background:#1b1511;border-left:1px solid #4a3525;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+  .card{background:#261d17;border:1px solid #5c4028;border-radius:10px;padding:10px;display:flex;justify-content:space-between;align-items:center}
+  .card h4{margin:0 0 4px 0;font-size:14px;color:#fbbf24}
+  .card p{margin:0;font-size:11px;color:#d6c7b8}
+  button{background:#b45309;color:#fff;border:none;padding:7px 12px;border-radius:8px;font-weight:bold;cursor:pointer}
+  button:hover{background:#d97706}
+  #log{margin-top:auto;background:#120d0a;padding:8px;border-radius:8px;height:110px;overflow-y:auto;font-size:11px;color:#fde68a;border:1px solid #3d2c1e}
+</style>
+</head>
+<body>
+<header>
+  <div><strong style="font-size:18px;color:#fbbf24">🪳 바퀴 만들기 게임</strong> <span id="stageTxt" style="font-size:12px;color:#a7f3d0">1단계: 유충 바퀴</span></div>
+  <div class="stats">
+    <span>🧀 먹이: <b id="food">60</b></span>
+    <span>🧬 유전자: <b id="dna">15</b></span>
+    <span>🥚 콜로니: <b id="pop">1/15</b></span>
+    <span>⚔️ 웨이브: <b id="wave">1</b> (<b id="timer">20</b>s)</span>
+    <span>👑 체력: <b id="hp">150/150</b></span>
+    <span>🪺 은신처: <b id="nestHp">500/500</b></span>
+  </div>
+</header>
+<main>
+  <div id="arena"><canvas id="cv"></canvas></div>
+  <aside>
+    <div class="card"><div><h4>🪳 일꾼 바퀴 부화</h4><p>먹이 자동 채집 (비용: 먹이 15)</p></div><button onclick="spawnAlly('worker')">부화</button></div>
+    <div class="card"><div><h4>⚔️ 병정 바퀴 부화</h4><p>개미·그리마 공격 (비용: 먹이 30)</p></div><button onclick="spawnAlly('soldier')">부화</button></div>
+    <div class="card"><div><h4>🛡️ 장갑 바퀴 부화</h4><p>고체력 방어 탱커 (먹이 50·유전자 2)</p></div><button onclick="spawnAlly('tank')">부화</button></div>
+    <div class="card"><div><h4>🧪 산성 바퀴 부화</h4><p>원거리 산성 포격 (먹이 60·유전자 3)</p></div><button onclick="spawnAlly('spitter')">부화</button></div>
+    <div class="card"><div><h4>🧬 바퀴 진화 강화</h4><p>대장 및 군집 공격·체력 상승 (유전자 5)</p></div><button onclick="evolveRoach()">진화</button></div>
+    <div class="card"><div><h4>📢 페로몬 총집결 [스킬]</h4><p>아군 집결 및 산성 폭발 분사</p></div><button onclick="castSkill()">발동</button></div>
+    <div class="card"><div><h4>🪺 은신처 확장·수리</h4><p>수용량 +5 및 내구도 회복 (먹이 40)</p></div><button onclick="upgradeNest()">확장</button></div>
+    <div id="log"><div>[안내] 마우스 클릭 또는 WASD로 대장 바퀴를 조작하세요! 그리마와 개미 군단을 물리치세요.</div></div>
+  </aside>
+</main>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+let W=800,H=500,keys={};
+function resize(){W=cv.width=cv.parentElement.clientWidth;H=cv.height=cv.parentElement.clientHeight}
+window.addEventListener('resize',resize);resize();
+window.addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
+window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+
+const state={food:60,dna:15,wave:1,timer:20,evo:1,nest:{x:120,y:250,hp:500,maxHp:500,cap:15},
+  leader:{x:200,y:250,tx:null,ty:null,hp:150,maxHp:150,atk:18,spd:150,ang:0},
+  allies:[],enemies:[],foods:[],projs:[]};
+
+cv.addEventListener('mousedown',e=>{const r=cv.getBoundingClientRect();state.leader.tx=e.clientX-r.left;state.leader.ty=e.clientY-r.top});
+function log(m){const el=document.getElementById('log'),d=document.createElement('div');d.textContent=m;el.prepend(d)}
+function spawnFood(){state.foods.push({x:180+Math.random()*(W-220),y:40+Math.random()*(H-80),v:15})}
+for(let i=0;i<7;i++)spawnFood();
+
+function spawnAlly(t){
+  if(1+state.allies.length>=state.nest.cap)return log('[알림] 은신처 수용량이 가득 찼습니다!');
+  const fc=t==='worker'?15:t==='soldier'?30:t==='tank'?50:60,dc=t==='tank'?2:t==='spitter'?3:0;
+  if(state.food<fc||state.dna<dc)return log('[알림] 먹이 또는 유전자가 부족합니다!');
+  state.food-=fc;state.dna-=dc;
+  const m=1+(state.evo-1)*0.25;
+  state.allies.push({t,x:state.nest.x+20,y:state.nest.y,ang:0,carry:0,cd:0,
+    hp:(t==='tank'?220:t==='soldier'?100:65)*m,atk:(t==='spitter'?20:t==='soldier'?15:8)*m,spd:t==='tank'?85:115});
+  log(`[부화] ${t} 바퀴가 콜로니에 합류했습니다!`);
+}
+function evolveRoach(){
+  if(state.dna<5)return log('[알림] 유전자가 부족합니다!');
+  state.dna-=5;state.evo++;state.leader.maxHp+=40;state.leader.hp=state.leader.maxHp;state.leader.atk+=8;
+  const names=['유충 바퀴','청년 바퀴','갑각 변이체','제왕 바퀴','궁극의 바퀴신'];
+  document.getElementById('stageTxt').textContent=`${state.evo}단계: ${names[Math.min(4,state.evo-1)]}`;
+  log(`[진화] 바퀴 유전자가 ${state.evo}단계로 진화했습니다!`);
+}
+function castSkill(){
+  for(const a of state.allies){a.x=state.leader.x+(Math.random()-0.5)*40;a.y=state.leader.y+(Math.random()-0.5)*40}
+  for(let i=0;i<12;i++){const a=(Math.PI*2/12)*i;state.projs.push({x:state.leader.x,y:state.leader.y,vx:Math.cos(a)*260,vy:Math.sin(a)*260,dmg:30+state.evo*8,life:1})}
+  log('[스킬] 페로몬 집결 및 산성 폭발 분사!');
+}
+function upgradeNest(){
+  if(state.food<40)return log('[알림] 먹이가 부족합니다!');
+  state.food-=40;state.nest.cap+=5;state.nest.hp=Math.min(state.nest.maxHp,state.nest.hp+150);
+  log('[은신처] 은신처 확장 및 보수 완료!');
+}
+function spawnWave(){
+  const w=state.wave;
+  for(let i=0;i<2+w;i++)state.enemies.push({k:'개미',x:W-20,y:40+Math.random()*(H-80),hp:45+w*15,atk:8+w*2,spd:90,r:8,cd:0});
+  for(let i=0;i<Math.ceil(w/2);i++)state.enemies.push({k:'그리마',x:W-20,y:60+Math.random()*(H-120),hp:130+w*35,atk:18+w*4,spd:125,r:14,cd:0});
+  log(`[경보] 제 ${w} 웨이브: 개미 군단과 천적 그리마가 습격합니다!`);
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  state.timer-=dt;if(state.timer<=0){spawnWave();state.wave++;state.timer=22}
+  if(state.foods.length<6&&Math.random()<0.03)spawnFood();
+
+  let mx=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0);
+  let my=(keys['s']||keys['arrowdown']?1:0)-(keys['w']||keys['arrowup']?1:0);
+  const L=state.leader;
+  if(mx||my){L.tx=null;const l=Math.hypot(mx,my);L.x+=(mx/l)*L.spd*dt;L.y+=(my/l)*L.spd*dt;L.ang=Math.atan2(my,mx)}
+  else if(L.tx!==null){const dx=L.tx-L.x,dy=L.ty-L.y,d=Math.hypot(dx,dy);if(d>5){L.x+=(dx/d)*L.spd*dt;L.y+=(dy/d)*L.spd*dt;L.ang=Math.atan2(dy,dx)}else L.tx=null}
+
+  for(let i=state.foods.length-1;i>=0;i--){const f=state.foods[i];if(Math.hypot(L.x-f.x,L.y-f.y)<22){state.food+=f.v;state.foods.splice(i,1)}}
+  for(const en of state.enemies){if(Math.hypot(L.x-en.x,L.y-en.y)<28){en.hp-=L.atk*dt*2}}
+
+  for(let i=state.allies.length-1;i>=0;i--){
+    const a=state.allies[i];a.cd=Math.max(0,a.cd-dt);
+    if(a.hp<=0){state.allies.splice(i,1);continue}
+    if(a.t==='worker'){
+      if(a.carry>0){const dx=state.nest.x-a.x,dy=state.nest.y-a.y,d=Math.hypot(dx,dy);a.x+=(dx/d)*a.spd*dt;a.y+=(dy/d)*a.spd*dt;if(d<35){state.food+=a.carry;a.carry=0}}
+      else if(state.foods[0]){const f=state.foods[0],dx=f.x-a.x,dy=f.y-a.y,d=Math.hypot(dx,dy);a.x+=(dx/d)*a.spd*dt;a.y+=(dy/d)*a.spd*dt;if(d<15){a.carry=f.v;state.foods.shift()}}
+    }else if(state.enemies[0]){
+      const en=state.enemies[0],dx=en.x-a.x,dy=en.y-a.y,d=Math.hypot(dx,dy),rng=a.t==='spitter'?140:20;
+      if(d>rng){a.x+=(dx/d)*a.spd*dt;a.y+=(dy/d)*a.spd*dt}
+      else if(a.cd<=0){a.cd=0.7;if(a.t==='spitter')state.projs.push({x:a.x,y:a.y,vx:(dx/d)*240,vy:(dy/d)*240,dmg:a.atk,life:0.8});else en.hp-=a.atk}
+    }
+  }
+  for(let i=state.projs.length-1;i>=0;i--){
+    const p=state.projs[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;
+    for(const en of state.enemies){if(Math.hypot(en.x-p.x,en.y-p.y)<en.r+6){en.hp-=p.dmg;p.life=0;break}}
+    if(p.life<=0)state.projs.splice(i,1);
+  }
+  for(let i=state.enemies.length-1;i>=0;i--){
+    const en=state.enemies[i];
+    if(en.hp<=0){state.food+=15;state.dna+=en.k==='그리마'?4:1;state.enemies.splice(i,1);continue}
+    const tgt=state.allies[0]||state.nest,dx=tgt.x-en.x,dy=tgt.y-en.y,d=Math.hypot(dx,dy);
+    if(d>22){en.x+=(dx/d)*en.spd*dt;en.y+=(dy/d)*en.spd*dt}else{tgt.hp-=en.atk*dt;if(state.nest.hp<=0){state.nest.hp=500;state.wave=1;state.enemies=[];log('[재시작] 은신처가 파괴되어 콜로니를 재건합니다!')}}
+  }
+
+  ctx.fillStyle='#16110d';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#5c3a21';ctx.beginPath();ctx.arc(state.nest.x,state.nest.y,36,0,7);ctx.fill();
+  ctx.fillStyle='#fde68a';ctx.fillText('🪺 은신처',state.nest.x-22,state.nest.y+50);
+  for(const f of state.foods){ctx.fillStyle='#facc15';ctx.beginPath();ctx.arc(f.x,f.y,6,0,7);ctx.fill()}
+  for(const a of state.allies){ctx.fillStyle=a.t==='spitter'?'#4ade80':a.t==='tank'?'#eab308':'#a16207';ctx.beginPath();ctx.ellipse(a.x,a.y,10,7,0,0,7);ctx.fill()}
+  ctx.fillStyle='#7c2d12';ctx.beginPath();ctx.ellipse(L.x,L.y,15+state.evo,10+state.evo*0.6,L.ang,0,7);ctx.fill();
+  ctx.fillStyle='#fbbf24';ctx.fillText('👑 대장 바퀴',L.x-26,L.y-16);
+  for(const en of state.enemies){
+    ctx.fillStyle=en.k==='그리마'?'#dc2626':'#7f1d1d';
+    ctx.beginPath();ctx.ellipse(en.x,en.y,en.r*1.3,en.r*0.7,0,0,7);ctx.fill();
+    ctx.fillStyle='#fca5a5';ctx.fillText(en.k,en.x-14,en.y-14);
+  }
+  for(const p of state.projs){ctx.fillStyle='#4ade80';ctx.beginPath();ctx.arc(p.x,p.y,4,0,7);ctx.fill()}
+
+  document.getElementById('food').textContent=Math.floor(state.food);
+  document.getElementById('dna').textContent=Math.floor(state.dna);
+  document.getElementById('pop').textContent=`${1+state.allies.length}/${state.nest.cap}`;
+  document.getElementById('wave').textContent=state.wave;
+  document.getElementById('timer').textContent=Math.ceil(state.timer);
+  document.getElementById('hp').textContent=`${Math.ceil(L.hp)}/${L.maxHp}`;
+  document.getElementById('nestHp').textContent=`${Math.ceil(state.nest.hp)}/${state.nest.maxHp}`;
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
